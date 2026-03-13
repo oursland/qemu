@@ -1605,10 +1605,10 @@ static void _decode_opc(DisasContext * ctx)
         return;
     case 0x4004: /* rotl Rn */
         tcg_gen_rotli_i32(REG(B11_8), REG(B11_8), 1);
-        tcg_gen_andi_i32(cpu_sr_t, REG(B11_8), 0);
+        tcg_gen_andi_i32(cpu_sr_t, REG(B11_8), 1);
         return;
     case 0x4005: /* rotr Rn */
-        tcg_gen_andi_i32(cpu_sr_t, REG(B11_8), 0);
+        tcg_gen_andi_i32(cpu_sr_t, REG(B11_8), 1);
         tcg_gen_rotri_i32(REG(B11_8), REG(B11_8), 1);
         return;
     case 0x4000: /* shll Rn */
