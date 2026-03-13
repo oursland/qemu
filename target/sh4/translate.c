@@ -1711,7 +1711,7 @@ static void _decode_opc(DisasContext * ctx)
         CHECK_FPU_ENABLED
         CHECK_FPSCR_PR_0
         gen_helper_fsrra_FT(FREG(B11_8), tcg_env, FREG(B11_8));
-        break;
+        return;
     case 0xf08d: /* fldi0 FRn - FPSCR: R[PR] */
         CHECK_FPU_ENABLED
         CHECK_FPSCR_PR_0
@@ -1745,9 +1745,8 @@ static void _decode_opc(DisasContext * ctx)
             TCGv m = tcg_constant_i32((ctx->opcode >> 8) & 3);
             TCGv n = tcg_constant_i32((ctx->opcode >> 10) & 3);
             gen_helper_fipr(tcg_env, m, n);
-            return;
         }
-        break;
+        return;
     case 0xf0fd: /* ftrv XMTRX,FVn */
         CHECK_FPU_ENABLED
         CHECK_FPSCR_PR_1
@@ -1757,9 +1756,8 @@ static void _decode_opc(DisasContext * ctx)
             }
             TCGv n = tcg_constant_i32((ctx->opcode >> 10) & 3);
             gen_helper_ftrv(tcg_env, n);
-            return;
         }
-        break;
+        return;
     }
 #if 0
     fprintf(stderr, "unknown instruction 0x%04x at pc 0x%08x\n",
