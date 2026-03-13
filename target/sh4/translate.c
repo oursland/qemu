@@ -1747,16 +1747,20 @@ static void _decode_opc(DisasContext * ctx)
             gen_helper_fipr(tcg_env, m, n);
         }
         return;
-    case 0xf0fd: /* ftrv XMTRX,FVn */
+    case 0xf0fd: /* ftrv XMTRX,FVn / fsca FPUL,DRn */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_1
-        {
-            if ((ctx->opcode & 0x0300) != 0x0100) {
+        if (ctx->opcode & 0x0100) {
+            CHECK_FPSCR_PR_1
+            if ((ctx->opcode & 0x0200) != 0) {
                 goto do_illegal;
             }
-            TCGv n = tcg_constant_i32((ctx->opcode >> 10) & 3);
-            gen_helper_ftrv(tcg_env, n);
+            gen_helper_ftrv(tcg_env, tcg_constant_i32((ctx->opcode >> 10) & 3));
+            return;
         }
+        if (ctx->tbflags & FPSCR_PR) {
+            goto do_illegal;
+        }
+        gen_helper_fsca_FT(tcg_env, tcg_constant_i32(B11_8));
         return;
     }
 #if 0

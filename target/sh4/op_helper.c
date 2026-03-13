@@ -21,6 +21,7 @@
 #include "exec/helper-proto.h"
 #include "accel/tcg/cpu-ldst.h"
 #include "fpu/softfloat.h"
+#include <math.h>
 
 #ifndef CONFIG_USER_ONLY
 
@@ -418,6 +419,26 @@ float32 helper_fsrra_FT(CPUSH4State *env, float32 t0)
     }
     update_fpscr(env, GETPC());
     return t0;
+}
+
+void helper_fsca_FT(CPUSH4State *env, uint32_t dp)
+{
+    int bank = (env->sr & FPSCR_FR) ? 16 : 0;
+    float sin_val, cos_val;
+    double angle = (double)(int32_t)env->fpul * (M_PI / 32768.0);
+
+    sin_val = sinf(angle);
+    cos_val = cosf(angle);
+    memcpy(&env->fregs[bank + dp + 0], &sin_val, sizeof(float32));
+    memcpy(&env->fregs[bank + dp + 1], &cos_val, sizeof(float32));
+
+    /*
+     * Since this is supposed to be an approximation, an imprecision
+     * exception is required.  One supposes this also follows the usual
+     * IEEE rule that other exceptions take precedence.
+     */
+    set_float_exception_flags(float_flag_inexact, &env->fp_status);
+    update_fpscr(env, GETPC());
 }
 
 float32 helper_fsub_FT(CPUSH4State *env, float32 t0, float32 t1)
