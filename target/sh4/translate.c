@@ -1687,10 +1687,22 @@ static void _decode_opc(DisasContext * ctx)
         return;
     case 0xf04d: /* fneg FRn/DRn - FPSCR: Nothing */
         CHECK_FPU_ENABLED
+        if (ctx->tbflags & FPSCR_PR) {
+            /* double-precision: odd DRn register is illegal */
+            if (ctx->opcode & 0x0100) {
+                goto do_illegal;
+            }
+        }
         tcg_gen_xori_i32(FREG(B11_8), FREG(B11_8), 0x80000000);
         return;
-    case 0xf05d: /* fabs FRn/DRn - FPCSR: Nothing */
+    case 0xf05d: /* fabs FRn/DRn - FPSCR: Nothing */
         CHECK_FPU_ENABLED
+        if (ctx->tbflags & FPSCR_PR) {
+            /* double-precision: odd DRn register is illegal */
+            if (ctx->opcode & 0x0100) {
+                goto do_illegal;
+            }
+        }
         tcg_gen_andi_i32(FREG(B11_8), FREG(B11_8), 0x7fffffff);
         return;
     case 0xf06d: /* fsqrt FRn */
@@ -1740,7 +1752,7 @@ static void _decode_opc(DisasContext * ctx)
         return;
     case 0xf0ed: /* fipr FVm,FVn */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_1
+        CHECK_FPSCR_PR_0
         {
             TCGv m = tcg_constant_i32((ctx->opcode >> 8) & 3);
             TCGv n = tcg_constant_i32((ctx->opcode >> 10) & 3);
@@ -1750,7 +1762,7 @@ static void _decode_opc(DisasContext * ctx)
     case 0xf0fd: /* ftrv XMTRX,FVn / fsca FPUL,DRn */
         CHECK_FPU_ENABLED
         if (ctx->opcode & 0x0100) {
-            CHECK_FPSCR_PR_1
+            CHECK_FPSCR_PR_0
             if ((ctx->opcode & 0x0200) != 0) {
                 goto do_illegal;
             }

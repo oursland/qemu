@@ -23,3 +23,7 @@ TESTS += test-addv
 
 test-subv: CFLAGS += -O -g
 TESTS += test-subv
+
+test-fpu-dp: CFLAGS += -O -g
+test-fpu-dp: LDFLAGS += -lm
+TESTS += test-fpu-dp
