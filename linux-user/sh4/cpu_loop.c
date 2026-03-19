@@ -64,6 +64,39 @@ void cpu_loop(CPUSH4State *env)
             cpu_exec_step_atomic(cs);
             arch_interrupt = false;
             break;
+        case 0x120: /* FPU exception */
+            {
+                /*
+                 * Map FPSCR cause bits to SIGFPE si_code.
+                 * Cause bits are at [17:12]: E,V,Z,O,U,I
+                 * Priority: Invalid > DivByZero > Overflow > Underflow > Inexact
+                 */
+                int si_code;
+                uint32_t cause = (env->fpscr & FPSCR_CAUSE_MASK) >> FPSCR_CAUSE_SHIFT;
+                if (cause & 0x10) {           /* V - Invalid operation */
+                    si_code = TARGET_FPE_FLTINV;
+                } else if (cause & 0x08) {    /* Z - Division by zero */
+                    si_code = TARGET_FPE_FLTDIV;
+                } else if (cause & 0x04) {    /* O - Overflow */
+                    si_code = TARGET_FPE_FLTOVF;
+                } else if (cause & 0x02) {    /* U - Underflow */
+                    si_code = TARGET_FPE_FLTUND;
+                } else if (cause & 0x01) {    /* I - Inexact */
+                    si_code = TARGET_FPE_FLTRES;
+                } else {
+                    si_code = TARGET_FPE_FLTINV; /* E or unknown */
+                }
+                force_sig_fault(TARGET_SIGFPE, si_code, env->pc);
+            }
+            break;
+        case 0x180: /* General illegal instruction */
+        case 0x1a0: /* Slot illegal instruction */
+            force_sig_fault(TARGET_SIGILL, TARGET_ILL_ILLOPC, env->pc);
+            break;
+        case 0x800: /* FPU disable */
+        case 0x820: /* Slot FPU disable */
+            force_sig_fault(TARGET_SIGILL, TARGET_ILL_COPROC, env->pc);
+            break;
         default:
             fprintf(stderr, "Unhandled trap: 0x%x\n", trapnr);
             cpu_dump_state(cs, stderr, 0);
