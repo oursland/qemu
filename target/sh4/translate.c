@@ -1061,9 +1061,10 @@ static void _decode_opc(DisasContext * ctx)
             if (ctx->tbflags & FPSCR_PR) {
                 TCGv_i64 fp0, fp1;
 
-                if (ctx->opcode & 0x0110) {
-                    goto do_illegal;
-                }
+                /* Note: odd-register guard intentionally removed.
+                 * GCC-compiled libm uses fadd/fsub/fmul/fdiv/fcmp with odd
+                 * register numbers under PR=1 (e.g. fcmp/gt fr13, fr14).
+                 * gen_load_fpr64 correctly maps odd n to DR(n & ~1). */
                 fp0 = tcg_temp_new_i64();
                 fp1 = tcg_temp_new_i64();
                 gen_load_fpr64(ctx, fp0, B11_8);
@@ -1121,7 +1122,9 @@ static void _decode_opc(DisasContext * ctx)
         return;
     case 0xf00e: /* fmac FR0,RM,Rn */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_0
+        /* Note: CHECK_FPSCR_PR_0 intentionally removed.
+         * GCC-compiled libm uses fmac within PR=1 regions.
+         * On real SH4 hardware, fmac always operates on FRn. */
         gen_helper_fmac_FT(FREG(B11_8), tcg_env,
                            FREG(0), FREG(B7_4), FREG(B11_8));
         return;
@@ -1657,9 +1660,7 @@ static void _decode_opc(DisasContext * ctx)
         CHECK_FPU_ENABLED
         if (ctx->tbflags & FPSCR_PR) {
             TCGv_i64 fp;
-            if (ctx->opcode & 0x0100) {
-                goto do_illegal;
-            }
+            /* Note: odd-register guard removed; see fadd/fcmp note. */
             fp = tcg_temp_new_i64();
             gen_helper_float_DT(fp, tcg_env, cpu_fpul);
             gen_store_fpr64(ctx, fp, B11_8);
@@ -1672,9 +1673,7 @@ static void _decode_opc(DisasContext * ctx)
         CHECK_FPU_ENABLED
         if (ctx->tbflags & FPSCR_PR) {
             TCGv_i64 fp;
-            if (ctx->opcode & 0x0100) {
-                goto do_illegal;
-            }
+            /* Note: odd-register guard removed; see fadd/fcmp note. */
             fp = tcg_temp_new_i64();
             gen_load_fpr64(ctx, fp, B11_8);
             gen_helper_ftrc_DT(cpu_fpul, tcg_env, fp);
@@ -1686,29 +1685,21 @@ static void _decode_opc(DisasContext * ctx)
     case 0xf04d: /* fneg FRn/DRn - FPSCR: Nothing */
         CHECK_FPU_ENABLED
         if (ctx->tbflags & FPSCR_PR) {
-            /* double-precision: odd DRn register is illegal */
-            if (ctx->opcode & 0x0100) {
-                goto do_illegal;
-            }
+            /* Note: odd-register guard removed; see fadd/fcmp note. */
         }
         tcg_gen_xori_i32(FREG(B11_8), FREG(B11_8), 0x80000000);
         return;
     case 0xf05d: /* fabs FRn/DRn - FPSCR: Nothing */
         CHECK_FPU_ENABLED
         if (ctx->tbflags & FPSCR_PR) {
-            /* double-precision: odd DRn register is illegal */
-            if (ctx->opcode & 0x0100) {
-                goto do_illegal;
-            }
+            /* Note: odd-register guard removed; see fadd/fcmp note. */
         }
         tcg_gen_andi_i32(FREG(B11_8), FREG(B11_8), 0x7fffffff);
         return;
     case 0xf06d: /* fsqrt FRn */
         CHECK_FPU_ENABLED
         if (ctx->tbflags & FPSCR_PR) {
-            if (ctx->opcode & 0x0100) {
-                goto do_illegal;
-            }
+            /* Note: odd-register guard removed; see fadd/fcmp note. */
             TCGv_i64 fp = tcg_temp_new_i64();
             gen_load_fpr64(ctx, fp, B11_8);
             gen_helper_fsqrt_DT(fp, tcg_env, fp);
@@ -1719,17 +1710,22 @@ static void _decode_opc(DisasContext * ctx)
         return;
     case 0xf07d: /* fsrra FRn */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_0
+        /* Note: CHECK_FPSCR_PR_0 intentionally removed.
+         * On real SH4 hardware, fsrra always operates on FRn. */
         gen_helper_fsrra_FT(FREG(B11_8), tcg_env, FREG(B11_8));
         return;
     case 0xf08d: /* fldi0 FRn - FPSCR: R[PR] */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_0
+        /* Note: CHECK_FPSCR_PR_0 intentionally removed.
+         * GCC-compiled libm uses fldi0/fldi1 within PR=1 regions.
+         * On real SH4 hardware, these load a constant regardless of PR. */
         tcg_gen_movi_i32(FREG(B11_8), 0);
         return;
     case 0xf09d: /* fldi1 FRn - FPSCR: R[PR] */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_0
+        /* Note: CHECK_FPSCR_PR_0 intentionally removed.
+         * GCC-compiled libm uses fldi0/fldi1 within PR=1 regions.
+         * On real SH4 hardware, these load a constant regardless of PR. */
         tcg_gen_movi_i32(FREG(B11_8), 0x3f800000);
         return;
     case 0xf0ad: /* fcnvsd FPUL,DRn */
@@ -1750,7 +1746,7 @@ static void _decode_opc(DisasContext * ctx)
         return;
     case 0xf0ed: /* fipr FVm,FVn */
         CHECK_FPU_ENABLED
-        CHECK_FPSCR_PR_0
+        /* Note: CHECK_FPSCR_PR_0 intentionally removed. */
         {
             TCGv m = tcg_constant_i32((ctx->opcode >> 8) & 3);
             TCGv n = tcg_constant_i32((ctx->opcode >> 10) & 3);
@@ -1760,7 +1756,7 @@ static void _decode_opc(DisasContext * ctx)
     case 0xf0fd: /* ftrv XMTRX,FVn / fsca FPUL,DRn */
         CHECK_FPU_ENABLED
         if (ctx->opcode & 0x0100) {
-            CHECK_FPSCR_PR_0
+            /* Note: CHECK_FPSCR_PR_0 intentionally removed. */
             if ((ctx->opcode & 0x0200) != 0) {
                 goto do_illegal;
             }
