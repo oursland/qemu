@@ -466,12 +466,10 @@ static void _decode_opc(DisasContext * ctx)
         tcg_gen_movi_i32(cpu_sr_t, 1);
         return;
     case 0xfbfd: /* frchg */
-        CHECK_FPSCR_PR_0
         tcg_gen_xori_i32(cpu_fpscr, cpu_fpscr, FPSCR_FR);
         ctx->base.is_jmp = DISAS_STOP;
         return;
     case 0xf3fd: /* fschg */
-        CHECK_FPSCR_PR_0
         tcg_gen_xori_i32(cpu_fpscr, cpu_fpscr, FPSCR_SZ);
         ctx->base.is_jmp = DISAS_STOP;
         return;
